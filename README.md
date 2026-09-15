@@ -200,11 +200,13 @@ codex update
 
 Then restart Codex Quota Tray.
 
-### Windows SmartScreen warning
+### Antivirus or Windows SmartScreen warning
 
 Release executables may be unsigned. Windows can display a SmartScreen warning for unsigned downloads. Review the source, build it yourself if preferred, or choose **More info** and **Run anyway** only when you trust the download source.
 
 Company-managed devices may also require approval under AppLocker, antivirus, or endpoint-security policies.
+
+Version 1.3.0 removes forceful child-process termination, process enumeration, and high-frequency topmost polling. It also includes a standard `asInvoker` application manifest and Windows version metadata to reduce heuristic false positives. No unsigned executable can be guaranteed safe from every antivirus heuristic; trusted code signing is the strongest long-term reputation signal.
 
 ### Double-click does not open Codex
 
@@ -242,6 +244,8 @@ Every repository file has a specific purpose:
 | `launch-quota-tray.vbs` | Optional launcher that starts the compiled app without a console window. |
 | `stop-quota-tray.cmd` | Optional helper that stops the running tray process. |
 | `src/Program.cs` | Complete production source: Codex discovery, local IPC, UI, and single-instance behavior. |
+| `src/AssemblyInfo.cs` | Standard product, publisher, copyright, and version metadata embedded in the EXE. |
+| `src/app.manifest` | Declares a normal non-elevated, DPI-aware Windows application. |
 | `skills/codex-quota-tray/SKILL.md` | Codex plugin skill instructions for starting and stopping the utility. |
 | `dist/CodexQuotaTray.exe` | Generated release executable; excluded from source commits by `.gitignore`. |
 
@@ -251,7 +255,7 @@ Source and script files also include a short header comment or metadata descript
 
 Quota retrieval relies on the local Codex app-server protocol. This protocol can change between Codex releases. Test the application again after major Codex updates.
 
-Codex Quota Tray 1.2.0 was developed against Codex CLI `0.142.0`.
+Codex Quota Tray 1.3.0 was developed against Codex CLI `0.142.0`.
 
 ## License
 

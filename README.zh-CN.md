@@ -200,11 +200,13 @@ codex update
 
 然后重新启动余量条。
 
-### Windows SmartScreen 警告
+### 杀毒软件或 Windows SmartScreen 警告
 
 Release 中的 EXE 可能没有商业代码签名。从网络下载未签名程序时，Windows 可能显示 SmartScreen 警告。你可以先审查源码或自行编译；确认下载来源可信后，也可以选择“更多信息”→“仍要运行”。
 
 企业电脑还可能受到 AppLocker、杀毒软件或终端安全策略限制，需要管理员放行。
+
+1.3.0 版移除了强制结束子进程、进程枚举和高频置顶轮询，并加入标准的 `asInvoker` 应用清单及 Windows 版本信息，以降低启发式误报概率。任何未签名 EXE 都无法保证不被所有杀毒引擎误判；获得受信任的代码签名证书才是建立长期信誉的最佳方式。
 
 ### 双击后没有打开 Codex
 
@@ -240,6 +242,8 @@ codex app
 | `launch-quota-tray.vbs` | 不显示控制台窗口地启动编译后程序。 |
 | `stop-quota-tray.cmd` | 停止正在运行的余量条进程。 |
 | `src/Program.cs` | 正式源码，包含 Codex 查找、本地 IPC、界面和单实例逻辑。 |
+| `src/AssemblyInfo.cs` | 写入 EXE 的标准产品、发布者、版权和版本信息。 |
+| `src/app.manifest` | 声明普通非管理员权限及 DPI 感知的 Windows 应用。 |
 | `skills/codex-quota-tray/SKILL.md` | Codex 插件用于启动和停止工具的 Skill 指令。 |
 | `dist/CodexQuotaTray.exe` | 生成的发布程序；由 `.gitignore` 排除，不建议提交到源码分支。 |
 
@@ -247,7 +251,7 @@ codex app
 
 额度读取依赖本机 Codex app-server 协议。该协议可能随 Codex 版本变化，建议在 Codex 大版本升级后重新测试。
 
-Codex Quota Tray 1.2.0 基于 Codex CLI `0.142.0` 开发和验证。
+Codex Quota Tray 1.3.0 基于 Codex CLI `0.142.0` 开发和验证。
 
 ## 许可证
 

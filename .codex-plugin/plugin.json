@@ -1,6 +1,6 @@
 {
   "name": "codex-quota-tray",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "description": "Compact Windows quota bar for Codex five-hour and weekly limits",
   "author": {
       "name": "David Wang"

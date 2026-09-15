@@ -71,7 +71,7 @@ namespace CodexQuotaTray
                 using (var p = Process.Start(StartInfo(exe, "login status")))
                 {
                     var output = p.StandardOutput.ReadToEnd() + p.StandardError.ReadToEnd();
-                    if (!p.WaitForExit(8000)) { p.Kill(); return Tuple.Create(false, "Login check timed out"); }
+                    if (!p.WaitForExit(8000)) return Tuple.Create(false, "Login check timed out");
                     return p.ExitCode == 0 && output.Contains("Logged in")
                         ? Tuple.Create(true, "")
                         : Tuple.Create(false, "Not signed in - double-click to open Codex");
@@ -131,24 +131,19 @@ namespace CodexQuotaTray
                 }
                 finally
                 {
-                    try { p.StandardInput.Close(); p.Kill(); } catch { }
+                    // Closing stdin sends EOF so Codex app-server can shut down normally.
+                    // Avoid force-terminating child processes, which can trigger AV heuristics.
+                    try { p.StandardInput.Close(); } catch { }
+                    try { p.WaitForExit(3000); } catch { }
                 }
             }
         }
 
         public static void OpenCodex()
         {
-            foreach (var process in Process.GetProcessesByName("Codex"))
-            {
-                if (process.MainWindowHandle != IntPtr.Zero)
-                {
-                    NativeMethods.ShowWindow(process.MainWindowHandle, 9);
-                    NativeMethods.SetForegroundWindow(process.MainWindowHandle);
-                    return;
-                }
-            }
             var exe = FindCodex();
             if (exe == null) return;
+            // The official CLI handles both focusing an existing app and launching it.
             Process.Start(new ProcessStartInfo(exe, "app") { UseShellExecute = false, CreateNoWindow = true });
         }
     }
@@ -160,8 +155,6 @@ namespace CodexQuotaTray
         internal const uint SWP_NOMOVE = 0x0002;
         internal const uint SWP_NOACTIVATE = 0x0010;
         [DllImport("user32.dll")] internal static extern bool SetWindowPos(IntPtr hWnd, IntPtr insertAfter, int x, int y, int cx, int cy, uint flags);
-        [DllImport("user32.dll")] internal static extern bool SetForegroundWindow(IntPtr hWnd);
-        [DllImport("user32.dll")] internal static extern bool ShowWindow(IntPtr hWnd, int command);
     }
 
     internal sealed class QuotaForm : Form
@@ -169,7 +162,6 @@ namespace CodexQuotaTray
         private readonly Label main = new Label();
         private readonly Label detail = new Label();
         private readonly System.Windows.Forms.Timer timer = new System.Windows.Forms.Timer();
-        private readonly System.Windows.Forms.Timer topmostTimer = new System.Windows.Forms.Timer();
         private Point dragStart;
         private bool dragging;
 
@@ -202,16 +194,17 @@ namespace CodexQuotaTray
             menu.Items.Add(new ToolStripSeparator());
             var exitItem = menu.Items.Add("Exit quota tray");
             exitItem.ForeColor = Color.FromArgb(220, 70, 70);
-            exitItem.Click += delegate { timer.Stop(); topmostTimer.Stop(); Close(); };
+            exitItem.Click += delegate { timer.Stop(); Close(); };
             ContextMenuStrip = menu; main.ContextMenuStrip = menu; detail.ContextMenuStrip = menu;
             foreach (Control c in new Control[] { this, main, detail }) {
-                c.MouseDown += DragDown; c.MouseMove += DragMove; c.MouseUp += delegate { dragging = false; };
+                c.MouseDown += DragDown; c.MouseMove += DragMove; c.MouseUp += delegate { dragging = false; KeepOnTop(); };
                 c.DoubleClick += delegate { CodexClient.OpenCodex(); };
             }
             timer.Interval = 60000; timer.Tick += delegate { RefreshQuota(); }; timer.Start();
-            topmostTimer.Interval = 750; topmostTimer.Tick += delegate { KeepOnTop(); }; topmostTimer.Start();
             Shown += delegate { KeepOnTop(); RefreshQuota(); };
             LocationChanged += delegate { KeepOnTop(); };
+            Activated += delegate { KeepOnTop(); };
+            Deactivate += delegate { KeepOnTop(); };
         }
 
         private void DragDown(object sender, MouseEventArgs e) { if (e.Button == MouseButtons.Left) { dragging = true; dragStart = Cursor.Position; } }
