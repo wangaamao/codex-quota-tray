@@ -3,6 +3,7 @@
 [简体中文说明](README.zh-CN.md)
 
 **Search keywords:** Codex, Codex quota, Codex remaining usage, ChatGPT Codex, ChatGPT usage limits, five-hour limit, weekly limit, rate limit monitor, usage reset time, Windows taskbar quota monitor, OpenAI Codex usage tracker.
+<img width="239" height="44" alt="image" src="https://github.com/user-attachments/assets/c3ef38a5-ba0c-4f80-9eda-0ea6850a61ab" />
 
 Codex Quota Tray is a tiny, open-source Windows utility that shows the remaining quota for the Codex five-hour and weekly usage windows, together with their reset times.
 
