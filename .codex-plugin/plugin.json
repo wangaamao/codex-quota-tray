@@ -1,0 +1,18 @@
+{
+  "name": "codex-quota-tray",
+  "version": "1.2.0",
+  "description": "Compact Windows quota bar for Codex five-hour and weekly limits",
+  "author": {
+      "name": "David Wang"
+  },
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Codex Quota Tray",
+    "shortDescription": "Tiny live 5-hour and weekly quota monitor.",
+    "longDescription": "Shows remaining Codex five-hour and weekly quota plus both reset times in a compact Windows taskbar-adjacent bar.",
+    "developerName": "David Wang",
+    "category": "Productivity",
+    "capabilities": [],
+    "defaultPrompt": "Start the Codex quota tray."
+  }
+}

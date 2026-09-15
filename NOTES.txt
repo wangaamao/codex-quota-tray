@@ -1,0 +1,17 @@
+Codex Quota Tray 1.2.0
+
+Purpose: Short usage note included beside the release executable.
+
+Keywords: Codex, Codex quota, remaining usage, ChatGPT Codex, usage limits,
+five-hour quota, weekly quota, reset time, rate limit monitor, Windows taskbar.
+
+Run CodexQuotaTray.exe. Right-click the floating label to refresh, open
+Codex, or exit. Double-click the label to open or focus Codex.
+
+Requirements:
+- Windows 10 or Windows 11
+- Codex CLI or the OpenAI Codex VS Code extension
+- A signed-in Codex account on the current Windows user profile
+
+The application does not contain, copy, export, or upload credentials.
+See README.md for the precise privacy and network behavior.

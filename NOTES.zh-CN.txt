@@ -1,0 +1,18 @@
+Codex 余量条 1.2.0
+
+用途：与发布版 EXE 放在一起的简体中文快速使用说明。
+
+搜索关键词：Codex、余量、剩余用量、ChatGPT、ChatGPT Codex、使用限额、
+5 小时余量、一周余量、重置时间、限额监控、Windows 任务栏插件、
+Codex quota、remaining usage、usage limits、rate limit monitor。
+
+双击 CodexQuotaTray.exe 运行。右键悬浮标签可以刷新、打开 Codex
+或退出。双击悬浮标签可以打开 Codex，或者切换到已经运行的 Codex。
+
+运行要求：
+- Windows 10 或 Windows 11
+- 已安装 Codex CLI 或 VS Code 的 OpenAI Codex 扩展
+- 当前 Windows 用户已经登录 Codex
+
+本应用不会包含、复制、导出或上传任何登录凭据。
+准确的隐私和网络行为说明请阅读 README.zh-CN.md。

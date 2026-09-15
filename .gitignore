@@ -1,0 +1,7 @@
+# Purpose: Keep generated binaries and local build output out of source commits.
+dist/
+*.zip
+*.user
+*.suo
+*.pdb
+*.tmp
