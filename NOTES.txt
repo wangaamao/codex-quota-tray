@@ -1,17 +1,19 @@
-Codex Quota Tray 1.3.2
+Codex Quota Tray 1.3.3
 
 Compact fonts follow the Windows desktop text setting and display DPI.
 The window opens at the current screen's bottom-right usable corner.
 Quota refresh defaults to 5 minutes and can be set to 1, 3, 5, or 10 minutes from the right-click menu.
 A failed refresh is retried up to three times before the normal schedule resumes.
+Double-click the floating label to refresh immediately.
+The right-click menu can open GitHub and shows the current and latest release versions.
 
 Purpose: Short usage note included beside the release executable.
 
 Keywords: Codex, Codex quota, remaining usage, ChatGPT Codex, usage limits,
 five-hour quota, weekly quota, reset time, rate limit monitor, Windows taskbar.
 
-Run CodexQuotaTray.exe. Right-click the floating label to refresh, open
-Codex, or exit. Double-click the label to open or focus Codex.
+Run CodexQuotaTray.exe. Double-click the floating label to refresh. Right-click
+to choose an interval, open Codex or GitHub, view versions, or exit.
 
 Requirements:
 - Windows 10 or Windows 11

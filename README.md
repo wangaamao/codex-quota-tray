@@ -9,7 +9,7 @@ Codex Quota Tray is a tiny, open-source Windows utility that shows the remaining
 It stays above the Windows taskbar, automatically sizes itself to the displayed text, refreshes every five minutes by default, and allows only one running instance.
 
 > [!IMPORTANT]
-> Codex Quota Tray itself makes **no direct network requests**. It does not include networking code, contact third-party servers, read browser data, inspect prompts, or access raw authentication tokens. It asks the locally installed Codex process for the quota values already associated with the current signed-in user. Codex itself may communicate with OpenAI to provide those values, just as it does during normal Codex use.
+> Codex Quota Tray never sends Codex account data, quota values, prompts, tokens, or local files anywhere. Quota retrieval still uses only the local Codex process. When the right-click menu is opened, the app makes one anonymous HTTPS request to GitHub's public Releases API (cached for six hours) solely to display the latest public version number. Codex itself may communicate with OpenAI to retrieve quota values, just as it does during normal Codex use.
 
 ## Features
 
@@ -18,13 +18,13 @@ It stays above the Windows taskbar, automatically sizes itself to the displayed 
 - Shows both reset times in the computer's local time zone.
 - Refreshes every 5 minutes by default, with 1, 3, 5, and 10-minute choices in the right-click menu.
 - Automatically retries a failed refresh up to three times, then returns to the selected normal interval.
+- Double-clicks refresh the quota immediately.
 - Stays above the Windows taskbar and other ordinary windows.
 - Automatically fits the displayed text with a small margin.
 - Derives its compact fonts from the current Windows desktop text setting and respects display DPI.
 - Opens at the bottom-right of the screen containing the mouse pointer, inside the usable work area.
 - Can be dragged to any screen position.
-- Opens or focuses Codex when double-clicked.
-- Provides Refresh, Open Codex, and Exit actions on right-click.
+- Provides Refresh, refresh interval, Open Codex, Open GitHub, version information, and Exit actions on right-click.
 - Uses a system-wide mutex to prevent duplicate instances.
 - Ships as a very small standalone Windows executable.
 
@@ -96,7 +96,7 @@ At each refresh, the program:
 
 If an attempt fails, the tray makes up to three additional attempts, 1.5 seconds apart. Whether a retry succeeds or all retries fail, the next scheduled refresh uses the selected normal interval. The interval setting is stored locally in `%LOCALAPPDATA%\CodexQuotaTray\settings.txt`; it contains only the selected number of minutes.
 
-There is no separate backend, telemetry service, analytics SDK, updater, database, or hidden background service in this repository.
+There is no separate backend, telemetry service, analytics SDK, updater, database, or hidden background service in this repository. Opening the right-click menu requests only the latest public release metadata from `api.github.com`; the result is cached in memory for six hours.
 
 ## Privacy and network behavior
 
@@ -104,7 +104,7 @@ There is no separate backend, telemetry service, analytics SDK, updater, databas
 
 Codex Quota Tray does **not**:
 
-- make HTTP, HTTPS, WebSocket, DNS, or other direct network requests;
+- send Codex account data, quota values, prompts, tokens, device identifiers, or local files over the network;
 - bundle or request an OpenAI API key;
 - read or export the raw Codex authentication token;
 - inspect conversations, prompts, source files, browser history, or clipboard data;
@@ -115,9 +115,11 @@ Codex Quota Tray does **not**:
 
 You can verify these claims by reviewing the complete application source in [`src/Program.cs`](src/Program.cs). The program only uses Windows Forms, local process execution, local JSON parsing, and a few Windows user-interface functions.
 
-### Important network clarification
+### Exact network behavior
 
-The tray application itself does not connect to the internet. However, the locally installed **Codex** process may contact OpenAI when it checks authentication or retrieves current rate-limit information. That network activity belongs to Codex and is governed by the user's Codex installation and OpenAI account settings.
+When the right-click menu opens, the tray makes an HTTPS GET request to GitHub's public latest-release endpoint. The request contains a generic `CodexQuotaTray/<version>` user-agent and no Codex account or quota data. The result is cached in memory for six hours. Selecting **Open GitHub** asks Windows to open the public repository in the default browser.
+
+Separately, the locally installed **Codex** process may contact OpenAI when it checks authentication or retrieves current rate-limit information. That activity belongs to Codex and is governed by the user's Codex installation and OpenAI account settings.
 
 Without Codex being able to reach its service, fresh quota information may be unavailable. Therefore this is not an offline quota calculator; it is a local display for data returned by Codex.
 
@@ -169,8 +171,8 @@ Portable installations and nonstandard editor locations may not be discovered. I
 ## Controls
 
 - Drag the label to reposition it.
-- Double-click the label to open or focus Codex.
-- Right-click the label to refresh, choose a 1, 3, 5, or 10-minute refresh interval, open Codex, or exit.
+- Double-click the label to refresh immediately.
+- Right-click the label to refresh, choose an interval, open Codex, open GitHub, view current/latest versions, or exit.
 - Start the executable again while it is running: the new process exits immediately.
 
 ## Troubleshooting
@@ -213,9 +215,9 @@ Company-managed devices may also require approval under AppLocker, antivirus, or
 
 Version 1.3.0 removes forceful child-process termination, process enumeration, and high-frequency topmost polling. It also includes a standard `asInvoker` application manifest and Windows version metadata to reduce heuristic false positives. No unsigned executable can be guaranteed safe from every antivirus heuristic; trusted code signing is the strongest long-term reputation signal.
 
-### Double-click does not open Codex
+### Open Codex does not work
 
-The application first tries to focus an existing Codex window. If none is found, it runs:
+Select **Open Codex** from the right-click menu. The application runs:
 
 ```powershell
 codex app
@@ -260,7 +262,7 @@ Source and script files also include a short header comment or metadata descript
 
 Quota retrieval relies on the local Codex app-server protocol. This protocol can change between Codex releases. Test the application again after major Codex updates.
 
-Codex Quota Tray 1.3.2 was developed against Codex CLI `0.142.0`.
+Codex Quota Tray 1.3.3 was developed against Codex CLI `0.142.0`.
 
 ## License
 

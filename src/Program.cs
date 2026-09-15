@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
@@ -14,6 +15,13 @@ using System.Windows.Forms;
 
 namespace CodexQuotaTray
 {
+    internal static class AppInfo
+    {
+        internal const string Version = "1.3.3";
+        internal const string RepositoryUrl = "https://github.com/wangaamao/codex-quota-tray";
+        internal const string LatestReleaseApi = "https://api.github.com/repos/wangaamao/codex-quota-tray/releases/latest";
+    }
+
     internal sealed class Quota
     {
         public int FiveRemaining;
@@ -104,7 +112,7 @@ namespace CodexQuotaTray
                     if (!p.WaitForExit(8000)) return Tuple.Create(false, "Login check timed out");
                     return p.ExitCode == 0 && output.Contains("Logged in")
                         ? Tuple.Create(true, "")
-                        : Tuple.Create(false, "Not signed in - double-click to open Codex");
+                        : Tuple.Create(false, "Not signed in - right-click to open Codex");
                 }
             }
             catch { return Tuple.Create(false, "Unable to check Codex sign-in status"); }
@@ -120,7 +128,7 @@ namespace CodexQuotaTray
                 string init = Json.Serialize(new Dictionary<string, object> {
                     {"id", 1}, {"method", "initialize"},
                     {"params", new Dictionary<string, object> {
-                        {"clientInfo", new Dictionary<string, object> {{"name", "codex-quota-tray"}, {"version", "1.3.2"}}},
+                        {"clientInfo", new Dictionary<string, object> {{"name", "codex-quota-tray"}, {"version", AppInfo.Version}}},
                         {"capabilities", new Dictionary<string, object> {{"experimentalApi", true}}}
                     }}
                 });
@@ -176,6 +184,11 @@ namespace CodexQuotaTray
             // The official CLI handles both focusing an existing app and launching it.
             Process.Start(new ProcessStartInfo(exe, "app") { UseShellExecute = false, CreateNoWindow = true });
         }
+
+        public static void OpenGitHub()
+        {
+            Process.Start(new ProcessStartInfo(AppInfo.RepositoryUrl) { UseShellExecute = true });
+        }
     }
 
     internal static class NativeMethods
@@ -193,9 +206,12 @@ namespace CodexQuotaTray
         private readonly Label detail = new Label();
         private readonly System.Windows.Forms.Timer timer = new System.Windows.Forms.Timer();
         private readonly Dictionary<int, ToolStripMenuItem> intervalItems = new Dictionary<int, ToolStripMenuItem>();
+        private readonly ToolStripMenuItem latestVersionItem = new ToolStripMenuItem("Latest version: checking...");
         private readonly Screen startupScreen;
         private int refreshMinutes;
         private bool refreshing;
+        private bool checkingVersion;
+        private DateTime lastVersionCheck = DateTime.MinValue;
         private Point dragStart;
         private bool dragging;
 
@@ -240,14 +256,20 @@ namespace CodexQuotaTray
             }
             menu.Items.Add(intervalMenu);
             menu.Items.Add("Open Codex", null, delegate { CodexClient.OpenCodex(); });
+            menu.Items.Add("Open GitHub", null, delegate { CodexClient.OpenGitHub(); });
+            menu.Items.Add(new ToolStripSeparator());
+            menu.Items.Add(new ToolStripMenuItem("Current version: v" + AppInfo.Version) { Enabled = false });
+            latestVersionItem.Enabled = false;
+            menu.Items.Add(latestVersionItem);
             menu.Items.Add(new ToolStripSeparator());
             var exitItem = menu.Items.Add("Exit quota tray");
             exitItem.ForeColor = Color.FromArgb(220, 70, 70);
             exitItem.Click += delegate { timer.Stop(); Close(); };
             ContextMenuStrip = menu; main.ContextMenuStrip = menu; detail.ContextMenuStrip = menu;
+            menu.Opening += MenuOpening;
             foreach (Control c in new Control[] { this, main, detail }) {
                 c.MouseDown += DragDown; c.MouseMove += DragMove; c.MouseUp += delegate { dragging = false; KeepOnTop(); };
-                c.DoubleClick += delegate { CodexClient.OpenCodex(); };
+                c.DoubleClick += delegate { RefreshQuota(); };
             }
             timer.Tick += delegate { RefreshQuota(); };
             SetRefreshInterval(AppSettings.LoadRefreshMinutes(), false);
@@ -292,6 +314,31 @@ namespace CodexQuotaTray
         private static DateTime FromUnix(long seconds) { return new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc).AddSeconds(seconds).ToLocalTime(); }
         private static string FiveReset(long seconds) { var d = FromUnix(seconds); return d.Date == DateTime.Today ? d.ToString("HH:mm") : d.ToString("MM-dd HH:mm"); }
         private static string WeekReset(long seconds) { return FromUnix(seconds).ToString("ddd HH:mm"); }
+
+        private async void MenuOpening(object sender, System.ComponentModel.CancelEventArgs e)
+        {
+            if (checkingVersion || DateTime.Now - lastVersionCheck < TimeSpan.FromHours(6)) return;
+            checkingVersion = true;
+            latestVersionItem.Text = "Latest version: checking...";
+            try
+            {
+                ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
+                using (var client = new WebClient())
+                {
+                    client.Headers[HttpRequestHeader.UserAgent] = "CodexQuotaTray/" + AppInfo.Version;
+                    string json = await client.DownloadStringTaskAsync(AppInfo.LatestReleaseApi);
+                    var data = new JavaScriptSerializer().Deserialize<Dictionary<string, object>>(json);
+                    string tag = data.ContainsKey("tag_name") ? Convert.ToString(data["tag_name"]) : "unknown";
+                    latestVersionItem.Text = "Latest version: " + tag;
+                    lastVersionCheck = DateTime.Now;
+                }
+            }
+            catch
+            {
+                latestVersionItem.Text = "Latest version: unavailable";
+            }
+            finally { checkingVersion = false; }
+        }
 
         private void SetRefreshInterval(int minutes, bool save)
         {
