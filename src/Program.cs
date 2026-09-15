@@ -162,6 +162,7 @@ namespace CodexQuotaTray
         private readonly Label main = new Label();
         private readonly Label detail = new Label();
         private readonly System.Windows.Forms.Timer timer = new System.Windows.Forms.Timer();
+        private readonly Screen startupScreen;
         private Point dragStart;
         private bool dragging;
 
@@ -173,20 +174,25 @@ namespace CodexQuotaTray
             ShowInTaskbar = false;
             BackColor = Color.FromArgb(17, 20, 24);
             Opacity = 0.96;
-            ClientSize = new Size(174, 40);
-            var area = Screen.PrimaryScreen.WorkingArea;
-            Location = new Point(area.Right - Width - 8, area.Bottom - Height - 6);
+            AutoScaleMode = AutoScaleMode.Dpi;
+            startupScreen = Screen.FromPoint(Cursor.Position);
+
+            // Follow the user's Windows desktop icon-text setting, but keep the
+            // overlay deliberately smaller than normal application text.
+            var desktopFont = SystemFonts.IconTitleFont;
+            float mainSize = Math.Max(7.0f, Math.Min(9.0f, desktopFont.SizeInPoints * 0.88f));
+            float detailSize = Math.Max(6.0f, Math.Min(7.5f, desktopFont.SizeInPoints * 0.75f));
 
             main.AutoSize = true;
-            main.Location = new Point(8, 3);
             main.ForeColor = Color.FromArgb(233, 238, 244);
-            main.Font = new Font("Segoe UI", 9, FontStyle.Bold);
+            main.Font = new Font(desktopFont.FontFamily, mainSize, FontStyle.Bold);
             main.Text = "Codex  Reading...";
             detail.AutoSize = true;
-            detail.Location = new Point(8, 21);
             detail.ForeColor = Color.FromArgb(141, 154, 170);
-            detail.Font = new Font("Segoe UI", 7.5f);
+            detail.Font = new Font(desktopFont.FontFamily, detailSize, FontStyle.Regular);
             Controls.Add(main); Controls.Add(detail);
+            FitToText();
+            SnapToStartupScreen();
 
             var menu = new ContextMenuStrip();
             menu.Items.Add("Refresh now", null, delegate { RefreshQuota(); });
@@ -201,7 +207,7 @@ namespace CodexQuotaTray
                 c.DoubleClick += delegate { CodexClient.OpenCodex(); };
             }
             timer.Interval = 60000; timer.Tick += delegate { RefreshQuota(); }; timer.Start();
-            Shown += delegate { KeepOnTop(); RefreshQuota(); };
+            Shown += delegate { SnapToStartupScreen(); KeepOnTop(); RefreshQuota(); };
             LocationChanged += delegate { KeepOnTop(); };
             Activated += delegate { KeepOnTop(); };
             Deactivate += delegate { KeepOnTop(); };
@@ -220,14 +226,22 @@ namespace CodexQuotaTray
         private void FitToText()
         {
             int right = Right;
+            int bottom = Bottom;
             int width = Math.Max(TextRenderer.MeasureText(main.Text, main.Font).Width,
-                                 TextRenderer.MeasureText(detail.Text, detail.Font).Width) + 16;
-            width = Math.Max(138, width);
-            ClientSize = new Size(width, 40);
-            main.Location = new Point(8, 3);
-            detail.Location = new Point(8, 21);
+                                 TextRenderer.MeasureText(detail.Text, detail.Font).Width) + 12;
+            width = Math.Max(112, width);
+            main.Location = new Point(6, 2);
+            detail.Location = new Point(6, main.Bottom - 1);
+            ClientSize = new Size(width, detail.Bottom + 3);
             Left = right - Width;
+            Top = bottom - Height;
             KeepOnTop();
+        }
+
+        private void SnapToStartupScreen()
+        {
+            var area = startupScreen.WorkingArea;
+            Location = new Point(area.Right - Width - 6, area.Bottom - Height - 6);
         }
 
         private static DateTime FromUnix(long seconds) { return new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc).AddSeconds(seconds).ToLocalTime(); }

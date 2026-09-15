@@ -19,6 +19,8 @@ It stays above the Windows taskbar, automatically sizes itself to the displayed 
 - Refreshes every 60 seconds.
 - Stays above the Windows taskbar and other ordinary windows.
 - Automatically fits the displayed text with a small margin.
+- Derives its compact fonts from the current Windows desktop text setting and respects display DPI.
+- Opens at the bottom-right of the screen containing the mouse pointer, inside the usable work area.
 - Can be dragged to any screen position.
 - Opens or focuses Codex when double-clicked.
 - Provides Refresh, Open Codex, and Exit actions on right-click.
@@ -220,11 +222,11 @@ Update Codex if the installed CLI does not provide the `app` command.
 
 ### Another application covers the tray
 
-The utility reapplies its topmost state every 750 milliseconds. Elevated applications and some exclusive full-screen programs may still cover a non-elevated window. Running everyday utilities as administrator is generally not recommended.
+The utility reapplies its topmost state only on relevant window events, avoiding high-frequency polling. Elevated applications and some exclusive full-screen programs may still cover a non-elevated window. Running everyday utilities as administrator is generally not recommended.
 
 ### Multiple monitors or display scaling
 
-The label initially appears near the taskbar on the primary display and can then be dragged elsewhere. Custom taskbars, vertical taskbars, or unusual DPI settings can affect its initial position but do not affect quota retrieval.
+The label initially snaps to the bottom-right of the screen containing the mouse pointer and stays inside that screen's usable work area, so it does not sit behind the taskbar. Its compact font follows the Windows desktop icon-text setting and display DPI. It can then be dragged elsewhere.
 
 ## Repository files
 
@@ -255,7 +257,7 @@ Source and script files also include a short header comment or metadata descript
 
 Quota retrieval relies on the local Codex app-server protocol. This protocol can change between Codex releases. Test the application again after major Codex updates.
 
-Codex Quota Tray 1.3.0 was developed against Codex CLI `0.142.0`.
+Codex Quota Tray 1.3.1 was developed against Codex CLI `0.142.0`.
 
 ## License
 
