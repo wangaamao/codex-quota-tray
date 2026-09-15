@@ -6,7 +6,7 @@
 
 Codex Quota Tray 是一个小巧、开源的 Windows 悬浮工具，用来显示当前 Codex 账户的 5 小时和一周剩余用量，以及对应的重置时间。
 
-![Uploading image.png…]()
+<img width="239" height="44" alt="image" src="https://github.com/user-attachments/assets/40efd1f7-660c-4812-9d7e-3af0c995e306" />
 
 
 它可以始终显示在 Windows 任务栏及普通窗口上方，根据文字自动调整大小，默认每 5 分钟刷新一次，并且只允许运行一个实例。
