@@ -6,7 +6,7 @@
 
 Codex Quota Tray is a tiny, open-source Windows utility that shows the remaining quota for the Codex five-hour and weekly usage windows, together with their reset times.
 
-It stays above the Windows taskbar, automatically sizes itself to the displayed text, refreshes once per minute, and allows only one running instance.
+It stays above the Windows taskbar, automatically sizes itself to the displayed text, refreshes every five minutes by default, and allows only one running instance.
 
 > [!IMPORTANT]
 > Codex Quota Tray itself makes **no direct network requests**. It does not include networking code, contact third-party servers, read browser data, inspect prompts, or access raw authentication tokens. It asks the locally installed Codex process for the quota values already associated with the current signed-in user. Codex itself may communicate with OpenAI to provide those values, just as it does during normal Codex use.
@@ -16,7 +16,8 @@ It stays above the Windows taskbar, automatically sizes itself to the displayed 
 - Shows the remaining percentage for the five-hour Codex window.
 - Shows the remaining percentage for the weekly Codex window.
 - Shows both reset times in the computer's local time zone.
-- Refreshes every 60 seconds.
+- Refreshes every 5 minutes by default, with 1, 3, 5, and 10-minute choices in the right-click menu.
+- Automatically retries a failed refresh up to three times, then returns to the selected normal interval.
 - Stays above the Windows taskbar and other ordinary windows.
 - Automatically fits the displayed text with a small margin.
 - Derives its compact fonts from the current Windows desktop text setting and respects display DPI.
@@ -91,7 +92,9 @@ At each refresh, the program:
 4. Sends an `account/rateLimits/read` request over redirected standard input.
 5. Reads the response from redirected standard output.
 6. Keeps only the two percentages and two reset timestamps in memory.
-7. Terminates the temporary app-server child process.
+7. Closes standard input and lets the temporary app-server child process exit normally.
+
+If an attempt fails, the tray makes up to three additional attempts, 1.5 seconds apart. Whether a retry succeeds or all retries fail, the next scheduled refresh uses the selected normal interval. The interval setting is stored locally in `%LOCALAPPDATA%\CodexQuotaTray\settings.txt`; it contains only the selected number of minutes.
 
 There is no separate backend, telemetry service, analytics SDK, updater, database, or hidden background service in this repository.
 
@@ -105,7 +108,7 @@ Codex Quota Tray does **not**:
 - bundle or request an OpenAI API key;
 - read or export the raw Codex authentication token;
 - inspect conversations, prompts, source files, browser history, or clipboard data;
-- write quota or account data to disk;
+- write quota or account data to disk (only the selected refresh interval is saved locally);
 - send telemetry, analytics, crash reports, or usage data;
 - connect to advertising, tracking, or third-party services;
 - transfer credentials or account information between computers.
@@ -167,7 +170,7 @@ Portable installations and nonstandard editor locations may not be discovered. I
 
 - Drag the label to reposition it.
 - Double-click the label to open or focus Codex.
-- Right-click the label to refresh, open Codex, or exit.
+- Right-click the label to refresh, choose a 1, 3, 5, or 10-minute refresh interval, open Codex, or exit.
 - Start the executable again while it is running: the new process exits immediately.
 
 ## Troubleshooting
@@ -257,7 +260,7 @@ Source and script files also include a short header comment or metadata descript
 
 Quota retrieval relies on the local Codex app-server protocol. This protocol can change between Codex releases. Test the application again after major Codex updates.
 
-Codex Quota Tray 1.3.1 was developed against Codex CLI `0.142.0`.
+Codex Quota Tray 1.3.2 was developed against Codex CLI `0.142.0`.
 
 ## License
 

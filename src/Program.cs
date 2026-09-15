@@ -22,6 +22,36 @@ namespace CodexQuotaTray
         public long WeekReset;
     }
 
+    internal static class AppSettings
+    {
+        private const int DefaultRefreshMinutes = 5;
+        private static readonly string Folder = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "CodexQuotaTray");
+        private static readonly string FilePath = Path.Combine(Folder, "settings.txt");
+
+        public static int LoadRefreshMinutes()
+        {
+            try
+            {
+                int value;
+                if (Int32.TryParse(File.ReadAllText(FilePath).Trim(), out value) &&
+                    new[] { 1, 3, 5, 10 }.Contains(value)) return value;
+            }
+            catch { }
+            return DefaultRefreshMinutes;
+        }
+
+        public static void SaveRefreshMinutes(int value)
+        {
+            try
+            {
+                Directory.CreateDirectory(Folder);
+                File.WriteAllText(FilePath, value.ToString());
+            }
+            catch { }
+        }
+    }
+
     internal static class CodexClient
     {
         private static readonly JavaScriptSerializer Json = new JavaScriptSerializer();
@@ -90,7 +120,7 @@ namespace CodexQuotaTray
                 string init = Json.Serialize(new Dictionary<string, object> {
                     {"id", 1}, {"method", "initialize"},
                     {"params", new Dictionary<string, object> {
-                        {"clientInfo", new Dictionary<string, object> {{"name", "codex-quota-tray"}, {"version", "1.2.0"}}},
+                        {"clientInfo", new Dictionary<string, object> {{"name", "codex-quota-tray"}, {"version", "1.3.2"}}},
                         {"capabilities", new Dictionary<string, object> {{"experimentalApi", true}}}
                     }}
                 });
@@ -162,7 +192,10 @@ namespace CodexQuotaTray
         private readonly Label main = new Label();
         private readonly Label detail = new Label();
         private readonly System.Windows.Forms.Timer timer = new System.Windows.Forms.Timer();
+        private readonly Dictionary<int, ToolStripMenuItem> intervalItems = new Dictionary<int, ToolStripMenuItem>();
         private readonly Screen startupScreen;
+        private int refreshMinutes;
+        private bool refreshing;
         private Point dragStart;
         private bool dragging;
 
@@ -196,6 +229,16 @@ namespace CodexQuotaTray
 
             var menu = new ContextMenuStrip();
             menu.Items.Add("Refresh now", null, delegate { RefreshQuota(); });
+            var intervalMenu = new ToolStripMenuItem("Refresh interval");
+            foreach (int minutes in new[] { 1, 3, 5, 10 })
+            {
+                int selectedMinutes = minutes;
+                var item = new ToolStripMenuItem(minutes + (minutes == 1 ? " minute" : " minutes"));
+                item.Click += delegate { SetRefreshInterval(selectedMinutes, true); };
+                intervalItems.Add(minutes, item);
+                intervalMenu.DropDownItems.Add(item);
+            }
+            menu.Items.Add(intervalMenu);
             menu.Items.Add("Open Codex", null, delegate { CodexClient.OpenCodex(); });
             menu.Items.Add(new ToolStripSeparator());
             var exitItem = menu.Items.Add("Exit quota tray");
@@ -206,7 +249,9 @@ namespace CodexQuotaTray
                 c.MouseDown += DragDown; c.MouseMove += DragMove; c.MouseUp += delegate { dragging = false; KeepOnTop(); };
                 c.DoubleClick += delegate { CodexClient.OpenCodex(); };
             }
-            timer.Interval = 60000; timer.Tick += delegate { RefreshQuota(); }; timer.Start();
+            timer.Tick += delegate { RefreshQuota(); };
+            SetRefreshInterval(AppSettings.LoadRefreshMinutes(), false);
+            timer.Start();
             Shown += delegate { SnapToStartupScreen(); KeepOnTop(); RefreshQuota(); };
             LocationChanged += delegate { KeepOnTop(); };
             Activated += delegate { KeepOnTop(); };
@@ -248,24 +293,56 @@ namespace CodexQuotaTray
         private static string FiveReset(long seconds) { var d = FromUnix(seconds); return d.Date == DateTime.Today ? d.ToString("HH:mm") : d.ToString("MM-dd HH:mm"); }
         private static string WeekReset(long seconds) { return FromUnix(seconds).ToString("ddd HH:mm"); }
 
+        private void SetRefreshInterval(int minutes, bool save)
+        {
+            refreshMinutes = minutes;
+            timer.Interval = minutes * 60 * 1000;
+            foreach (var pair in intervalItems) pair.Value.Checked = pair.Key == minutes;
+            if (save) AppSettings.SaveRefreshMinutes(minutes);
+            if (timer.Enabled) { timer.Stop(); timer.Start(); }
+        }
+
         private async void RefreshQuota()
         {
-            main.Text = "Codex  Refreshing..."; main.ForeColor = Color.FromArgb(233, 238, 244);
+            if (refreshing) return;
+            refreshing = true;
+            timer.Stop();
+            Exception lastError = null;
             try
             {
-                var q = await Task.Factory.StartNew<Quota>(() => CodexClient.ReadQuota());
-                int low = Math.Min(q.FiveRemaining, q.WeekRemaining);
-                main.ForeColor = low > 30 ? Color.FromArgb(86, 211, 100) : low > 10 ? Color.FromArgb(227, 179, 65) : Color.FromArgb(248, 81, 73);
-                main.Text = String.Format("5h {0}%   |   Week {1}%", q.FiveRemaining, q.WeekRemaining);
-                detail.Text = "Resets " + FiveReset(q.FiveReset) + "   |   " + WeekReset(q.WeekReset);
+                for (int attempt = 0; attempt < 4; attempt++)
+                {
+                    main.Text = attempt == 0 ? "Codex  Refreshing..." : String.Format("Codex  Retry {0}/3...", attempt);
+                    main.ForeColor = Color.FromArgb(233, 238, 244);
+                    FitToText();
+                    try
+                    {
+                        var q = await Task.Factory.StartNew<Quota>(() => CodexClient.ReadQuota());
+                        int low = Math.Min(q.FiveRemaining, q.WeekRemaining);
+                        main.ForeColor = low > 30 ? Color.FromArgb(86, 211, 100) : low > 10 ? Color.FromArgb(227, 179, 65) : Color.FromArgb(248, 81, 73);
+                        main.Text = String.Format("5h {0}%   |   Week {1}%", q.FiveRemaining, q.WeekRemaining);
+                        detail.Text = "Resets " + FiveReset(q.FiveReset) + "   |   " + WeekReset(q.WeekReset);
+                        FitToText();
+                        return;
+                    }
+                    catch (Exception ex)
+                    {
+                        lastError = ex;
+                    }
+                    if (attempt < 3) await Task.Delay(1500);
+                }
+
+                var msg = lastError == null ? "Unknown refresh error" : lastError.GetBaseException().Message;
+                main.Text = msg.Contains("not installed") ? "Codex  Not installed" : msg.Contains("Not signed in") ? "Codex  Not signed in" : "Codex  Unavailable";
+                main.ForeColor = Color.FromArgb(248, 81, 73);
+                detail.Text = msg.Length > 35 ? msg.Substring(0, 35) : msg;
                 FitToText();
             }
-            catch (Exception ex)
+            finally
             {
-                var msg = ex.GetBaseException().Message;
-                main.Text = msg.Contains("not installed") ? "Codex  Not installed" : msg.Contains("Not signed in") ? "Codex  Not signed in" : "Codex  Unavailable";
-                main.ForeColor = Color.FromArgb(248, 81, 73); detail.Text = msg.Length > 35 ? msg.Substring(0, 35) : msg;
-                FitToText();
+                refreshing = false;
+                timer.Interval = refreshMinutes * 60 * 1000;
+                if (!IsDisposed && !Disposing) timer.Start();
             }
         }
     }
